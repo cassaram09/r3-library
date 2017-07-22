@@ -6,6 +6,15 @@ export const actions = {
   delete: (state, action) => { return removeData(state, action) },
 }
 
+export function buildDefaultReducerActions(name){
+  var newActions = {}
+  for( var key in actions ) {
+    var newKey = name + '_' + key
+    newActions[newKey] = actions[key];
+  }
+  return newActions;
+}
+
 export function removeData(state, action){
   const newState = Object.assign([], state);
   const indexToDelete = state.findIndex(exercise => {
