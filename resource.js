@@ -1,49 +1,55 @@
 import HTTP from './http'
+import defaultReducerActions from './defaultReducerActions'
 
 class Resource extends HTTP {
   constructor(name, url, headers){
     super();
 
-    this.name = name.toUpperCase(); // for strong params
+    this.name = name
     this.url = url;
-
-    this.actionTypes = {
-      query: `QUERY_${this.name}_SUCCESS`,
-      get: `GET_${this.name}_SUCCESS`,
-      create: `CREATE_${this.name}_SUCCESS`,
-      update: `UPDATE_${this.name}_SUCCESS`,
-      delete: `DELETE_${this.name}_SUCCESS`
-    }
-
     this.headers = headers;
+  
+    this.reducerActions = defaultReducerActions;
 
     this.dispatchAction = (action, data) => {
       const resource = this;
       return (dispatch) => {
         return resource[action](data).then( response => {
-          dispatch(resource.reducerAction(action, response))
+          dispatch({type: action, response})
         }).catch(error =>{
           throw(error);
         })
       }
     }
 
-    this.reducerAction = (action, data) => { 
-      return {
-        type: this.actionTypes[action], data};
+    this.addReducerAction = (name, callback) => {
+      this.actionTypes[name] = this.actionTypes[name] || callback;
     }
+
+    this.reducer = (state = [], action) => {
+      var resource = this;
+      debugger
+      if (resource.reducerActions[action.type]) {
+        return resource.reducerActions[action.type](state, action)  
+      }
+      return state;
+    }
+
+    this.registerAction = (url, name, method, reducerFn) => {
+      this[name] = (data) => {
+        var request = HTTP.createRequest(url, method, data, this.createHeaders())
+        return HTTP.fetchRequest(request)
+      };
+      this.reducerActions[name] = reducerFn
+    }
+
   }
+
 
   createHeaders(){
     return new Headers(this.headers)
   }
 
-  addAction(name, callback){
-    this.actionTypes[name] = `${name.toUpperCase()}_SUCCESS`;
-    this[name] = callback;
-  }
-
-  // CRUD HTTP actions
   query() {
     var request = HTTP.createRequest(this.url, 'GET', null, this.createHeaders())
     return HTTP.fetchRequest(request)

@@ -1,6 +1,16 @@
 class HTTP {
   constructor(){}
+
   static createRequest(url, method, body, headers) {
+
+    var urlParams = url.match(/:(\w+)/ig)
+
+    if (urlParams) {
+      for ( let param of urlParams ){
+        url = url.replace(param, body[param.substring(1)])
+      }
+      body = null;
+    }
 
     if (body){
       body = JSON.stringify(body);
@@ -32,8 +42,8 @@ class HTTP {
     return HTTP.fetchRequest(request)
   }
 
-  static $get(url, id, headers){
-    var request = HTTP.createRequest(url, 'GET', id, headers);
+  static $get(url, data, headers){
+    var request = HTTP.createRequest(url, 'GET', data, headers);
     return HTTP.fetchRequest(request)
   }
 
@@ -42,8 +52,8 @@ class HTTP {
     return HTTP.fetchRequest(request)
   }
 
-  static $delete(url, id, headers){
-    var request = HTTP.createRequest(url, 'DELETE', id, headers);
+  static $delete(url, data, headers){
+    var request = HTTP.createRequest(url, 'DELETE', data, headers);
     return HTTP.fetchRequest(request)
   }
 
