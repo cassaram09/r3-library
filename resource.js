@@ -1,5 +1,5 @@
 import HTTP from './http'
-import defaultReducerActions from './defaultReducerActions'
+import * as reducer from './defaultReducerActions'
 
 class Resource extends HTTP {
   constructor(name, url, headers){
@@ -8,14 +8,13 @@ class Resource extends HTTP {
     this.name = name
     this.url = url;
     this.headers = headers;
-  
-    this.reducerActions = defaultReducerActions;
+    this.reducerActions = reducer.actions;
 
     this.dispatchAction = (action, data) => {
       const resource = this;
       return (dispatch) => {
         return resource[action](data).then( response => {
-          dispatch({type: action, response})
+          dispatch({type: action, data: response})
         }).catch(error =>{
           throw(error);
         })
@@ -23,12 +22,11 @@ class Resource extends HTTP {
     }
 
     this.addReducerAction = (name, callback) => {
-      this.actionTypes[name] = this.actionTypes[name] || callback;
+      this.reducerActions[name] = this.reducerActions[name] || callback;
     }
 
     this.reducer = (state = [], action) => {
       var resource = this;
-      debugger
       if (resource.reducerActions[action.type]) {
         return resource.reducerActions[action.type](state, action)  
       }
@@ -40,11 +38,14 @@ class Resource extends HTTP {
         var request = HTTP.createRequest(url, method, data, this.createHeaders())
         return HTTP.fetchRequest(request)
       };
-      this.reducerActions[name] = reducerFn
+      this.addReducerAction(name, reducerFn);
+    }
+
+    this.updateReducerAction = (name, callback) => {
+      this.reducerActions[name] = callback;
     }
 
   }
-
 
   createHeaders(){
     return new Headers(this.headers)

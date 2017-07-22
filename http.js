@@ -60,4 +60,3 @@ class HTTP {
 }
 
 export default HTTP;
-    

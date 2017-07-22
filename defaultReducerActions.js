@@ -1,4 +1,4 @@
-export const defaultReducerActions = {
+export const actions = {
   query: (state, action) => { return action.data },
   get: (state, action) => { return addData(state, action) },
   create: (state, action) => { return addData(state, action) },
