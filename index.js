@@ -1,1 +1,3 @@
-export {default as Resource} from './src/resource'
+import Resource from './src/resource'
+
+export default Resource;
