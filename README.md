@@ -99,26 +99,32 @@ export default connect(mapStateToProps, mapDispatchToProps)(UserProfile);
 The following are instance methods available on an instance of Resource. These methods are chainable (see example above).
 
 **.registerNewAction(url, name, method, reducerFn)**
+
 Register a new action. This creates the custom resource action and reducer action, adding both to the current resource.
 
 **.addResourceAction(url, name, method)**
+
 Create a new resource action. Accepts the target url, name of the action (not prefixed), and the callback function. *NOTE: must match a reducer name.*
 
 **.addReducerAction(name, callback)**
+
 Create a new reducer action. Accepts the name of the reducer case (not prefixed), and the callback function. *NOTE: must match a resource name.*
 
 **.updateReducerAction(name, callback)**
+
 Update/overwrite a reducer action (such as a default reducer action) 
 
 **.updateResourceAction(name, callback)**
 Update/overwrite a resource action (such as a default resource action)
 
 **.registerDefaults()**
+
 Registers the default action/reducers for CRUD operations: query(index), get(individual resource), create, update, and delete.
 
 ## To Do
 
   - Build out test coverage 
+  - Install jsLint
 
 ## Contributing
 
