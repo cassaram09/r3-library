@@ -27,6 +27,7 @@ class Resource extends HTTP {
     Resource.prototype.dispatchAction = (action, data) => {
       const name = this.prefix + action
       const res = this
+      debugger
       return (dispatch) => {
         return this.resourceActions[name](data).then( response => {
           dispatch({type: name, data: response})
