@@ -115,6 +115,7 @@ Create a new reducer action. Accepts the name of the reducer case (not prefixed)
 Update/overwrite a reducer action (such as a default reducer action) 
 
 **.updateResourceAction(name, callback)**
+
 Update/overwrite a resource action (such as a default resource action)
 
 **.registerDefaults()**
