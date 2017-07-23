@@ -7,22 +7,20 @@ class HTTP {
 
     if (urlParams) {
       for ( let param of urlParams ){
-        url = url.replace(param, body[param.substring(1)])
+        url = url.replace(param, HTTP.findValueByKey(body, param.substring(1)))
       }
-      body = null;
     }
 
-    if (body){
+    // Not permitted to send a body with GET/HEAD requests
+    if (body && method != 'GET'){
       body = JSON.stringify(body);
-    }
-
-    if (!headers){
-      headers = new Headers();
+    } else {
+      body = undefined;
     }
 
     var request = new Request(url, {
       method: method,
-      headers: headers,
+      headers: new Headers(headers),
       body: body
     });
 
@@ -55,6 +53,18 @@ class HTTP {
   static $delete(url, data, headers){
     var request = HTTP.createRequest(url, 'DELETE', data, headers);
     return HTTP.fetchRequest(request)
+  }
+
+  static findValueByKey(obj, key){
+    var match;
+    for (var prop in obj) {
+      if (key === prop) {
+        return obj[prop]
+      } else{
+        return HTTP.findValueByKey(obj[prop], key)
+      }
+    }
+    return null;
   }
 
 }
