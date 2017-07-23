@@ -1,5 +1,5 @@
 import HTTP from './http'
-import * as reducer from './defaultReducerActions'
+import Defaults from './defaults'
 
 class Resource extends HTTP {
   constructor(name, url, headers){
@@ -8,22 +8,22 @@ class Resource extends HTTP {
     this.name = name
     this.url = url;
     this.headers = headers;
-    this.reducerActions = reducer.buildDefaultReducerActions(name)
+
+    this.reducerActions = {};
+    this.resourceActions = {};
 
     this.dispatchAction = (action, data) => {
       const resource = this;
       const name = this.name + '_' + action
       return (dispatch) => {
-        return resource[action](data).then( response => {
+        return resource.resourceActions[name](data).then( response => {
+          var res = resource
+          
           dispatch({type: name, data: response})
         }).catch(error =>{
           throw(error);
         })
       }
-    }
-
-    this.addReducerAction = (name, callback) => {
-      this.reducerActions[name] = this.reducerActions[name] || callback;
     }
 
     this.reducer = (state = [], action) => {
@@ -34,51 +34,55 @@ class Resource extends HTTP {
       return state;
     }
 
-    this.registerAction = (url, name, method, reducerFn) => {
-      this[name] = (data) => {
+    this.registerNewAction = (url, name, method, reducerFn) => {
+      this.addResourceAction(url, name, method)
+      this.addReducerAction(name, reducerFn);
+      return this;
+    }
+
+    this.addResourceAction = (url, name, method) => {
+      var actionName = this.name + '_' + name
+      this.resourceActions[actionName] = (data) => {
         var request = HTTP.createRequest(url, method, data, this.createHeaders())
         return HTTP.fetchRequest(request)
       };
+      return this;
+    }
+
+    this.addReducerAction = (name, callback) => {
       var actionName = this.name + '_' + name
-      this.addReducerAction(actionName, reducerFn);
+      this.reducerActions[actionName] = this.reducerActions[actionName] || callback;
+      return this;
     }
 
     this.updateReducerAction = (name, callback) => {
-      this.reducerActions[name] = callback;
+      var actionName = this.name + '_' + name
+      this.reducerActions[actionName] = callback;
+      return this;
     }
 
-  }
+    this.updateResourceAction = (name, callback) => {
+      var actionName = this.name + '_' + name
+      this.reducerActions[actionName] = callback;
+      return this;
+    }
 
-  createHeaders(){
-    return new Headers(this.headers)
-  }
 
-  query() {
-    var request = HTTP.createRequest(this.url, 'GET', null, this.createHeaders())
-    return HTTP.fetchRequest(request)
-  }
+    this.createHeaders = () => {
+      return new Headers(this.headers)
+    }
 
-  get(id) {
-    var url = this.url + '/' + id
-    var request = HTTP.createRequest(url , 'GET', null, this.createHeaders());
-    return HTTP.fetchRequest(request);
-  }
+    this.registerDefaults = () => {
+      const obj =  Defaults
+      for ( let name in obj) {
+        var url = this.url + obj[name].url;
+        var method = obj[name].method
+        this.addResourceAction(url, name, method)
+        this.addReducerAction(name, obj[name].reducerFn)
+      }
+      return this;
+    }
 
-  create(data){
-    var request = HTTP.createRequest(this.url, 'POST', data, this.createHeaders());
-    return HTTP.fetchRequest(request)
-  }
-
-  update(data) {
-    var url = this.url + '/' + data.id
-    var request = HTTP.createRequest(url, 'PATCH', data, this.createHeaders());
-    return HTTP.fetchRequest(request);
-  }
-
-  delete(id){
-    var url = this.url + '/' + id
-    var request = HTTP.createRequest(url, 'DELETE', null, this.createHeaders());
-    return HTTP.fetchRequest(request)
   }
 
 }
