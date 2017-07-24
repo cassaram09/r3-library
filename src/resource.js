@@ -10,11 +10,15 @@ class Resource extends HTTP {
     this.url = url;
     this.headers = headers;
     this.prefix = name + '_'
-    this.state = state || []
+    this.state = this.setState(state)
 
     //  declare our reducer and resource action holders
     this.reducerActions = {};
     this.resourceActions = {};
+
+    this.setState = (state) => {
+      return state === undefined ? [] : state;
+    }
 
     /*  
         Generic dispatch action that accepts the name of the action we want
