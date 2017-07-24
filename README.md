@@ -1,6 +1,6 @@
 # r3 Library
 
-**r3-library** (short for React-Readux-Resource) is a small library to handle remote API resources in a CRUD React-Redux application more efficiently. This library creates a new resource predefined with a set of RESTful CRUD actions, but also offers flexiblity for custom actions. 
+**r3-library** (short for React-Redux-Resource) is a small library to handle remote API resources in a CRUD React-Redux application more efficiently. This library creates a new resource predefined with a set of RESTful CRUD actions, but also offers flexibility for custom actions. 
 
 ## Installation
 
