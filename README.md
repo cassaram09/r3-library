@@ -126,6 +126,7 @@ Registers the default action/reducers for CRUD operations: query(index), get(ind
 
   - Build out test coverage 
   - Install jsLint
+  - CLI for generating a new resource
 
 ## Contributing
 
