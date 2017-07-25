@@ -7,12 +7,22 @@ describe('Resource class', function () {
 
   it('creates a new resource', function () {
       const headers = {'CONTENT': 'JSON'}
-      const res = new Resource('resource', '/resources', headers, []);
+      const res = new Resource('resource', '/resources', headers);
     
       expect(res.name).toEqual('resource');
       expect(res.url).toEqual('/resources');
       expect(res.headers).toEqual(headers);
       expect(res.state).toEqual([]);
+  });
+
+  it('sets the default state correctly', function () {
+      const first = new Resource('first', '/first', null);
+      const second = new Resource('second', '/second', null).configureState(false);
+      const third = new Resource('second', '/second', null).configureState('cat');
+      
+      expect(first.state).toEqual([]);
+      expect(second.state).toEqual(false);
+      expect(third.state).toEqual('cat');
   });
 
   it('registers default functions when called', function () {
@@ -27,7 +37,7 @@ describe('Resource class', function () {
   });
 
   it('successfully registers new actions', function () {
-      const res = new Resource('resource', '/resources');
+      const res = new Resource('resource', '/resources', null, []);
 
       res.registerNewAction('/current-user', 'getCurrentUser', 'GET', (state, action) => {return action.data})
 

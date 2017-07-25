@@ -30,7 +30,6 @@ const url = '/users'
 
 const headers = {
   'Content-Type': 'application/json',
-  'AUTHORIZATION': `Bearer ${sessionStorage.jwt}`
 }
 
 const User = new Resource('user', url, headers, [])
@@ -63,11 +62,8 @@ class UserProfile extends Component {
     }
     this.updateUser = (event) => {
       event.preventDefault();
-      var state = Object.assign({}, this.state)
-      delete state.user.avatar;
       // calls the User resource's update action, passing state as data
-      this.props.actions.dispatchAction('update', state)
-      return this.toggleEdit();
+      this.props.actions.dispatchAction('update', this.state)
     }
   }
 
@@ -124,8 +120,9 @@ Registers the default action/reducers for CRUD operations: query(index), get(ind
 
 ## To Do
 
-  - Build out test coverage 
-  - CLI for generating a new resource
+  - Create CLI for generating a new resource
+  - Build out test coverage
+  - Build more robust request creation
 
 ## Contributing
 

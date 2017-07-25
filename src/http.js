@@ -35,22 +35,22 @@ class HTTP {
     })
   }
 
-  static $post(url, data, headers){
+  static post(url, data, headers){
     var request = HTTP.createRequest(url, 'POST', data, headers);
     return HTTP.fetchRequest(request)
   }
 
-  static $get(url, data, headers){
+  static get(url, data, headers){
     var request = HTTP.createRequest(url, 'GET', data, headers);
     return HTTP.fetchRequest(request)
   }
 
-  static $patch(url, data, headers){
+  static patch(url, data, headers){
     var request = HTTP.createRequest(url, 'PATCH', data, headers);
     return HTTP.fetchRequest(request)
   }
 
-  static $delete(url, data, headers){
+  static delete(url, data, headers){
     var request = HTTP.createRequest(url, 'DELETE', data, headers);
     return HTTP.fetchRequest(request)
   }
