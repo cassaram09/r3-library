@@ -94,6 +94,10 @@ export default connect(mapStateToProps, mapDispatchToProps)(UserProfile);
 
 The following are instance methods available on an instance of Resource. These methods are chainable (see example above).
 
+**.configureState(state)**
+
+Set the state of the reducer. By default, a new resource's state is an empty array `[]`.
+
 **.registerNewAction(url, name, method, reducerFn)**
 
 Register a new action. This creates the custom resource action and reducer action, adding both to the current resource.
