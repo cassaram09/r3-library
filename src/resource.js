@@ -1,5 +1,6 @@
 import HTTP from "./http";
 import Defaults from "./defaults";
+import
 
 class Resource extends HTTP {
   constructor(name, url, headers){
@@ -61,7 +62,7 @@ class Resource extends HTTP {
       return this;
     }
 
-    //  create a new reducer action (more flexible)
+    //  create a new resource action (more flexible)
     this.addResourceAction = (url, name, method) => {
       var actionName = this.prefix + name;
       this.resourceActions[actionName] = (data) => {
@@ -78,14 +79,14 @@ class Resource extends HTTP {
       return this;
     }
 
-    //  Upadate/overwrrite a reducer action (such as a default action. 
+    //  Update/overwrrite a reducer action (such as a default action. 
     this.updateReducerAction = (name, callback) => {
       var actionName = this.prefix + name;
       this.reducerActions[actionName] = callback;
       return this;
     }
 
-    //  Upadate/overwrrite a resource action (such as a default action. 
+    //  Update/overwrrite a resource action (such as a default action. 
     this.updateResourceAction = (name, callback) => {
       var actionName = this.prefix + name;
       this.reducerActions[actionName] = callback;
