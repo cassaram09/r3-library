@@ -1,6 +1,5 @@
 import HTTP from "./http";
 import Defaults from "./defaults";
-import
 
 class Resource extends HTTP {
   constructor(name, url, headers){
