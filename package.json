@@ -1,6 +1,6 @@
 {
   "name": "r3-library",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "A library for simplifying remote API request in React-Redux.",
   "main": "lib/index.js",
   "scripts": {
