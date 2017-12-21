@@ -11,25 +11,7 @@ To install, run:
 
 Make sure you have **redux** installed. 
 
-```
-// store.js
-
-import {combineReducers} from 'redux';
-import { createStore, applyMiddleware} from 'redux'
-import Widget from '/src/app/widget/widgetResource'
-
-const rootReducer = combineReducers({
-  widgets: Widget.reducer,
-})
-
-function configureStore(){
-  return createStore(rootReducer)
-};
-
-export default configureStore();
-```
-
-To create a new RESTful resource, pass an options object during initialization with at least a `name` property, then export the resource:
+1) To create a new Resource, pass an options object during initialization with at least a `name` property, then export the resource:
 
 ```
 // widgetResource.js 
@@ -98,7 +80,27 @@ export default Widget;
 
 ```
 
-To use `r3-library`, import the resource and your store into the file appropriate file. Because the dispatch action returns a function that accepts `dispatch` as an arg, we pass `Store.dispatch` as an argument to the returned function.
+2) Add the Resource's reducer to the your store:
+
+```
+// store.js
+
+import {combineReducers} from 'redux';
+import { createStore, applyMiddleware} from 'redux'
+import Widget from '/src/app/widget/widgetResource'
+
+const rootReducer = combineReducers({
+  widgets: Widget.reducer,
+})
+
+function configureStore(){
+  return createStore(rootReducer)
+};
+
+export default configureStore();
+```
+
+3) Import the Resource and your store into the appropriate file. Because the dispatch action returns a function that accepts `dispatch` as an arg, we pass `Store.dispatch` as an argument to the returned function*
 
 `Resource.dispatchAction('update', this.state)(Store.dispatch)`
 
@@ -189,7 +191,7 @@ Registers the default remote action and reducers for CRUD operations: query(inde
 ## To Do
 
   - Create CLI for generating a new resource
-  - Remove necessity for call to Store.dispatch when dispatching an action
+  - Remove necessity for call to Store.dispatch when dispatching an action*
   - More robust test coverage
   - Better request creation and handling
 
