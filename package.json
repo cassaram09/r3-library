@@ -1,6 +1,6 @@
 {
   "name": "r3-library",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A library for simplifying resource actions in React / Redux application.",
   "main": "lib/index.js",
   "scripts": {
