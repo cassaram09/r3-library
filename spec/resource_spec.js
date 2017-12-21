@@ -7,7 +7,8 @@ describe('Resource class', function () {
 
   it('creates a new resource', function () {
       const headers = {'CONTENT': 'JSON'}
-      const res = new Resource('resource', '/resources', headers);
+      const state = []
+      const res = new Resource({name: 'resource', url: '/resources', headers: headers, state: state});
     
       expect(res.name).toEqual('resource');
       expect(res.url).toEqual('/resources');
@@ -15,31 +16,21 @@ describe('Resource class', function () {
       expect(res.state).toEqual([]);
   });
 
-  it('sets the default state correctly', function () {
-      const first = new Resource('first', '/first', null);
-      const second = new Resource('second', '/second', null).configureState(false);
-      const third = new Resource('second', '/second', null).configureState('cat');
-      
-      expect(first.state).toEqual([]);
-      expect(second.state).toEqual(false);
-      expect(third.state).toEqual('cat');
-  });
+  it('registers remote actions when called', function () {
+      const remotes = new Resource({name: 'defaults', url: '/defaults', headers: {}, state: []}).registerRemoteActions();
+      const noRemotes = new Resource({name: 'defaults', url: '/defaults', headers: {}, state: []})
 
-  it('registers default functions when called', function () {
-      const defaults = new Resource('defaults', '/resources', {}, []).registerDefaults();
-      const noDefaults = new Resource('noDefaults', '/resources', {}, [])
+      const remotesKeys = Object.keys(remotes.resourceActions)
+      expect(remotesKeys.length).toEqual(5);
 
-      defaultKeys = Object.keys(defaults.resourceActions)
-      expect(defaultKeys.length).toEqual(5);
-
-      noDefaultKeys = Object.keys(noDefaults.resourceActions)
-      expect(noDefaultKeys.length).toEqual(0);
+      const noRemotesKeys = Object.keys(noRemotes.resourceActions)
+      expect(noRemotesKeys.length).toEqual(0);
   });
 
   it('successfully registers new actions', function () {
-      const res = new Resource('resource', '/resources', null, []);
+      const res = new Resource({name: 'resource', url: '/resources', headers: null, state: []});
 
-      res.registerNewAction('/current-user', 'getCurrentUser', 'GET', (state, action) => {return action.data})
+      res.registerNewAction({name: 'getCurrentUser', url: '/current-user', method: 'GET', reducerFn: (state, action) => {return action.data} })
 
       var key = Object.keys(res.resourceActions)[0]
       expect(res.resourceActions[key]).toBeTruthy()
@@ -47,9 +38,10 @@ describe('Resource class', function () {
   });
 
   // it('successfully dispatches actions', function () {
-  //     const res = new Resource('resource', '/resources')
+  //     const res = new Resource({name: 'resource', url: '/resources'})
 
   //     res.addReducerAction('test', (state, action) => {return action.data})
+
   //     res.resourceActions.resource_test = () => {
   //       var promise = new Promise((resolve, reject) => {
   //         true ? resolve({data: 'myData'}) : reject(Error("Error"));
@@ -57,7 +49,6 @@ describe('Resource class', function () {
   //       return promise; 
   //     }
 
-   
   //     expect(data).toEqual('myData')
   // });
 
