@@ -132,12 +132,11 @@ ReactDOM.render(
 import React, {Component} from 'react';
 import {connect} from 'react-redux';  
 
-import Store from 'src/app/store/store'
 import Widget from '/src/app/widget/widgetResource'
 
 class WidgetsPage extends Component {
   componentWillMount(){
-    Widget.dispatchAction('query')(Store.dispatch)
+    Widget.dispatchAction('query')
   }
 
   render(){
