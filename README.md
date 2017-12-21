@@ -1,6 +1,8 @@
 # r3 Library
 
-**r3-library** (short for React-Redux-Resource) is a small library to handle resources in a React-Redux application more efficiently. This library creates a new resource predefined with a set of RESTful CRUD actions, but also offers flexibility for custom actions. 
+**r3-library** (short for React-Redux-Resource) is a small library to handle resources in a React-Redux application more efficiently. This library allows users to create a Resource handles remote and promise based actions. It dynamically generates the reducer for use by the store. 
+
+This project was inspired by AngularJS $Resource functionality for making HTTP requests. While the original goal was only to handle HTTP requests, it was useful to also be able to use non-HTTP, promise-based actions as part of the resource's capabilities. 
 
 ## Installation
 
@@ -10,8 +12,15 @@ To install, run:
 Make sure you have **redux** installed. 
 
 ```
+// store.js
+
+import {combineReducers} from 'redux';
 import { createStore, applyMiddleware} from 'redux'
-import rootReducer from './rootReducer'
+import Widget from '/src/app/widget/widgetResource'
+
+const rootReducer = combineReducers({
+  widgets: Widget.reducer,
+})
 
 function configureStore(){
   return createStore(rootReducer)
@@ -20,108 +29,101 @@ function configureStore(){
 export default configureStore();
 ```
 
-To create a new RESTful resource, create a new file and export the resource:
+To create a new RESTful resource, pass an options object during initialization with at least a `name` property, then export the resource:
 
 ```
-// Simple example. 
+// widgetResource.js 
+// simple example. 
 
 import Resource from 'r3-library'
 
 const Widget = new Resource({
   name: 'widgets', 
-  url:  '/widgets', 
-  headers: {}, 
-  state: []
 })
-
-Widget.registerRemoteActions();
 
 export default Widget;
 ```
 
 ```
+// widgetResource.js 
 // More complex example!
 
 import Resource from 'r3-library'
-import API from '/src/app/utils/api';
-import request from 'superagent';
 
-const User = new Resource({
-  name: 'user', 
-  url:  API.base + '/users', 
-  headers: API.headers, 
-  state: {}
+const headers = {'Content-Type': "application/json"}
+
+const Widget = new Resource({
+  name: 'widgets', 
+  url: 'http://localhost:3000/widgets', 
+  headers: headers, 
+  state: []
 })
 
-// fetches data for the current user
-User.registerNewAction({
-  name: 'getCurrentUser', 
-  url: API.base + '/current-user', 
+// Custom action
+Widget.registerNewAction({
+  name: 'getCurrentWidget', 
+  url: API.base + '/current-widget', 
   method: 'GET', 
   reducerFn: ( (state, action) => action.data ) 
 })
 
-// updates data for the current user, returns updated user
-User.registerNewAction({
-  name: 'update', 
-  url: User.url + '/:id', 
-  method: 'PATCH', 
-  reducerFn: ( (state, action) => action.data ) 
-})
+// Example of promise-based, non remote resource action below
 
-// handle image upload - example of a custom action
-const uploadImageAction = (data) => {
+// Promise based resource action
+const localWidgetAction = () => {
   return new Promise((resolve, reject) => {
-    const req = request.patch(User.url + '/' + data.id).set('AUTHORIZATION', `Bearer ${sessionStorage.jwt}`)
-      req.attach('user[avatar]', data.file);
-      req.end(function(error, response){
-        resolve(response.body);
-      });
+    resolve({widgets: true})
   });
 }
 
-User.registerNewAction({
-  name: 'uploadImage', 
-  url: User.url + '/:id', 
-  method: 'PATCH', 
-  reducerFn: ( (state, action) => action.data ),
-  resourceFn: uploadImageAction
+// Corresponding reducer
+const localWidgetReducer = (state, action) => {
+  if (action.widgets){
+    // do some stuff
+  } else {
+    return state
+  }
+}
+
+// Then register the action
+Widget.registerNewAction({
+  name: 'localWidget', 
+  url: '/local-widget', 
+  method: 'POST',
+  resourceFn: localWidgetAction, 
+  reducerFn: localWidgetReducer
 })
 
-export default User;
+export default Widget;
 
 ```
 
-Then call the resource where you'd like to use it:
+To use `r3-library`, import the resource and your store into the file appropriate file. Because the dispatch action returns a function that accepts `dispatch` as an arg, we pass `Store.dispatch` as an argument to the returned function.
+
 `Resource.dispatchAction('update', this.state)(Store.dispatch)`
 
 ```
 import React, {Component} from 'react';
 import {connect} from 'react-redux';  
 
-import User from './userResource'
-import UserForm from './userForm'
+import Store from 'src/app/store/store'
+import Widget from '/src/app/widget/widgetResource'
 
-import Store from '../store/store'
-
-class UserProfile extends Component {
-  constructor(props){
-    super(props) 
-
-    this.state = {
-      user: this.props.user,
-    }
-
-    this.updateUser = (event) => {
-      event.preventDefault();
-      User.dispatchAction('update', this.state)(Store.dispatch)
-    }
+class WidgetsPage extends Component {
+  componentWillMount(){
+    Widget.dispatchAction('query')(Store.dispatch)
   }
 
   render(){
+    if ( this.props.widgets ){
+      const widgets = this.prpos.widgets.map(widget => {
+        return (<div className='widget'>{widget.quantity}</div>)
+      })
+    }
+
     return (
-      <div id='userProfile'>
-        <UserForm user={this.state.user} updateUser={this.updateUser} /> 
+      <div className='widgets-page'>
+        {widgets}
       </div>
     )
   }
@@ -129,45 +131,67 @@ class UserProfile extends Component {
 }
 
 function mapStateToProps(state, ownProps) { 
-  return {user: state.user};
+  return {widgets: state.widgets};
 };
 
-export default connect(mapStateToProps)(UserProfile);
+export default connect(mapStateToProps)(WidgetsPage);
 ```
 
-## Resource Functions
+## API
 
-The following are instance methods available on an instance of Resource. These methods are chainable (see example above).
+**.registerNewAction(options)**
 
-**.registerNewAction(url, name, method, reducerFn)**
+Register a new action. This creates the custom resource action and reducer action, and adds both to the current resource.
 
-Register a new action. This creates the custom resource action and reducer action, adding both to the current resource.
+options = {
+  name: string.isRequired,
+  url: string.isRequired, 
+  method: string.isRequired, 
+  reducerFn: func.isRequired
+}
 
-**.addResourceAction(url, name, method)**
+**.addResourceAction(options)**
 
-Create a new resource action. Accepts the target url, name of the action (not prefixed), and the callback function. *NOTE: must match a reducer name.*
+Create a new resource action. Accepts name of the action (not prefixed), target Url, and the callback resource function. If no resource function is provided, r3-library will add a generic function that sends a request to the target url with the specified method and the Resource's declared headers. *NOTE: must match a reducer name.*
 
-**.addReducerAction(name, callback)**
+options = {
+  name: string.isRequired, 
+  url: string.isRequired, 
+  method: string.isRequired, 
+  resourceFn: func
+}
 
-Create a new reducer action. Accepts the name of the reducer case (not prefixed), and the callback function. *NOTE: must match a resource name.*
+**.addReducerAction(name, reducerFn)**
+
+name: string.isRequired
+reducerFn: func.isRequired
+
+Creates a new reducer action. Accepts the name of the reducer case (not prefixed), and the callback reducer function. Passing the name of a reducer that already exists will not overwrite that reducer. Use `updateReducerAction` instead. *NOTE: must match a resource name.*
 
 **.updateReducerAction(name, callback)**
 
-Update/overwrite a reducer action (such as a default reducer action) 
+name: string.isRequired
+reducerFn: func.isRequired
 
-**.updateResourceAction(name, callback)**
+Updates a reducer action (such as a default reducer action). Accepts the name of the reducer case (not prefixed), and the callback reducer function.
 
-Update/overwrite a resource action (such as a default resource action)
+**.updateResourceAction(name, resourceFn)**
+
+name: string.isRequired
+resourceFn: func
+
+Updates a resource action (such as a default resource action). Accepts the name of the resource action (not prefixed), and the callback resource function. If no resource function is provided, r3-library will add a generic function that sends a request to the target url with the specified method and the Resource's declared headers.
 
 **.registerRemoteActions()**
 
-Registers the default remote action/reducers for CRUD operations: query(index), get(individual resource), create, update, and delete.
+Registers the default remote action and reducers for CRUD operations: query(index), get(individual resource), create, update, and delete.
 
 ## To Do
 
   - Create CLI for generating a new resource
-  - Build out test coverage
-  - Build more robust request creation
+  - Remove necessity for call to Store.dispatch when dispatching an action
+  - More robust test coverage
+  - Better request creation and handling
 
 ## Contributing
 
