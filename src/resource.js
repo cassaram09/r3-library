@@ -32,6 +32,13 @@ class Resource {
 }
 
 /*  
+ * Pass the Store's dispatch function as an argument.
+*/
+Resource.setDispatch = function(dispatch){
+  this.prototype.dispatch = dispatch;
+}
+
+/*  
  * Generic dispatch action that accepts the name of the action we want
  * to exectute, plus a data object. 
  * Find the action, prefixed by the resource name (to prevent conflicts),
