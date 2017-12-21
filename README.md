@@ -1,21 +1,20 @@
 # r3 Library
 
-**r3-library** (short for React-Redux-Resource) is a small library to handle remote API resources in a CRUD React-Redux application more efficiently. This library creates a new resource predefined with a set of RESTful CRUD actions, but also offers flexibility for custom actions. 
+**r3-library** (short for React-Redux-Resource) is a small library to handle resources in a React-Redux application more efficiently. This library creates a new resource predefined with a set of RESTful CRUD actions, but also offers flexibility for custom actions. 
 
 ## Installation
 
 To install, run:
-`npm install r3-library`
+`npm install r3-library --save`
 
-Make sure you have **redux-thunk** included in your middleware. 
+Make sure you have **redux** installed. 
 
 ```
 import { createStore, applyMiddleware} from 'redux'
 import rootReducer from './rootReducer'
-import thunk from 'redux-thunk'
 
 function configureStore(){
-  return createStore(rootReducer, applyMiddleware(thunk))
+  return createStore(rootReducer)
 };
 
 export default configureStore();
@@ -24,34 +23,86 @@ export default configureStore();
 To create a new RESTful resource, create a new file and export the resource:
 
 ```
+// Simple example. 
+
 import Resource from 'r3-library'
 
-const url = '/users'
+const Widget = new Resource({
+  name: 'widgets', 
+  url:  '/widgets', 
+  headers: {}, 
+  state: []
+})
 
-const headers = {
-  'Content-Type': 'application/json',
+Widget.registerRemoteActions();
+
+export default Widget;
+```
+
+```
+// More complex example!
+
+import Resource from 'r3-library'
+import API from '/src/app/utils/api';
+import request from 'superagent';
+
+const User = new Resource({
+  name: 'user', 
+  url:  API.base + '/users', 
+  headers: API.headers, 
+  state: {}
+})
+
+// fetches data for the current user
+User.registerNewAction({
+  name: 'getCurrentUser', 
+  url: API.base + '/current-user', 
+  method: 'GET', 
+  reducerFn: ( (state, action) => action.data ) 
+})
+
+// updates data for the current user, returns updated user
+User.registerNewAction({
+  name: 'update', 
+  url: User.url + '/:id', 
+  method: 'PATCH', 
+  reducerFn: ( (state, action) => action.data ) 
+})
+
+// handle image upload - example of a custom action
+const uploadImageAction = (data) => {
+  return new Promise((resolve, reject) => {
+    const req = request.patch(User.url + '/' + data.id).set('AUTHORIZATION', `Bearer ${sessionStorage.jwt}`)
+      req.attach('user[avatar]', data.file);
+      req.end(function(error, response){
+        resolve(response.body);
+      });
+  });
 }
 
-const User = new Resource('user', url, headers, [])
-  .registerDefaults()
-  .registerNewAction('/password-reset', 'changePassword', 'POST')
-  .registerNewAction(url, 'uploadImage', 'GET')
-  .registerNewAction('/current-user', 'getCurrentUser', 'GET', (state, action) => {return action.data})
-  .addReducerAction('update', (state, action) => {return action.data})
-  .addResourceAction('/users', 'update', 'PATCH');
+User.registerNewAction({
+  name: 'uploadImage', 
+  url: User.url + '/:id', 
+  method: 'PATCH', 
+  reducerFn: ( (state, action) => action.data ),
+  resourceFn: uploadImageAction
+})
 
 export default User;
+
 ```
 
 Then call the resource where you'd like to use it:
+`Resource.dispatchAction('update', this.state)(Store.dispatch)`
 
 ```
 import React, {Component} from 'react';
 import {connect} from 'react-redux';  
-import {bindActionCreators} from 'redux'; 
 
 import User from './userResource'
 import UserForm from './userForm'
+
+import Store from '../store/store'
 
 class UserProfile extends Component {
   constructor(props){
@@ -60,10 +111,10 @@ class UserProfile extends Component {
     this.state = {
       user: this.props.user,
     }
+
     this.updateUser = (event) => {
       event.preventDefault();
-      // calls the User resource's update action, passing state as data
-      this.props.actions.dispatchAction('update', this.state)
+      User.dispatchAction('update', this.state)(Store.dispatch)
     }
   }
 
@@ -81,22 +132,12 @@ function mapStateToProps(state, ownProps) {
   return {user: state.user};
 };
 
-function mapDispatchToProps(dispatch){
-  return {
-    // Connect your resource's dispatch action to this component
-    actions: bindActionCreators({dispatchAction: User.dispatchAction}, dispatch)
-  }
-}
-export default connect(mapStateToProps, mapDispatchToProps)(UserProfile);
+export default connect(mapStateToProps)(UserProfile);
 ```
 
 ## Resource Functions
 
 The following are instance methods available on an instance of Resource. These methods are chainable (see example above).
-
-**.configureState(state)**
-
-Set the state of the reducer. By default, a new resource's state is an empty array `[]`.
 
 **.registerNewAction(url, name, method, reducerFn)**
 
@@ -118,9 +159,9 @@ Update/overwrite a reducer action (such as a default reducer action)
 
 Update/overwrite a resource action (such as a default resource action)
 
-**.registerDefaults()**
+**.registerRemoteActions()**
 
-Registers the default action/reducers for CRUD operations: query(index), get(individual resource), create, update, and delete.
+Registers the default remote action/reducers for CRUD operations: query(index), get(individual resource), create, update, and delete.
 
 ## To Do
 
