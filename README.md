@@ -100,7 +100,31 @@ function configureStore(){
 export default configureStore();
 ```
 
-3) Import the Resource and your store into the appropriate file. Because the dispatch action returns a function that accepts `dispatch` as an arg, we pass `Store.dispatch` as an argument to the returned function*
+3) Configure the Resource module to use your Store's dispatch function:
+
+```
+// index.js
+
+import React from 'react';
+import { Provider } from 'react-redux'; 
+
+import Store from '/src/app/store/store'
+import Resource from '/src/app/utils/resource';
+
+import App from '/src/app/app';
+
+Resource.setDispatch(Store.dispatch)
+
+ReactDOM.render(
+  <Provider store={Store}>
+    <App />
+  </Provider>,
+   document.getElementById('root')
+);
+
+```
+
+4) Import the Resource and your store into the appropriate file. Because the dispatch action returns a function that accepts `dispatch` as an arg, we pass `Store.dispatch` as an argument to the returned function*
 
 `Resource.dispatchAction('update', this.state)(Store.dispatch)`
 
@@ -140,6 +164,10 @@ export default connect(mapStateToProps)(WidgetsPage);
 ```
 
 ## API
+
+**.setDispatch(dispatchFn)**
+
+Assign the store's dispatch function to our Resource. This allows us to skip binding our action creators. Call this in your `index.js` file before your render function.
 
 **.registerNewAction(options)**
 
