@@ -1,4 +1,4 @@
-const r3 = require("../lib/resource");
+const r3 = require("../lib/index");
 const Promise = require('promise')
 
 const Resource = r3.default;
