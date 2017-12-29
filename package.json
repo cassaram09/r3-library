@@ -14,9 +14,12 @@
     "babel-cli": "^6.24.1",
     "babel-preset-es2015": "^6.24.1",
     "jasmine": "^2.6.0",
+    "jasmine-promises": "^0.4.1",
     "jslint": "^0.11.0",
     "promise": "^8.0.1",
-    "require": "^2.4.20"
+    "redux": "^3.7.2",
+    "require": "^2.4.20",
+    "superagent-mocker": "^0.5.2"
   },
   "dependencies": {
     "superagent": "^3.8.2"
