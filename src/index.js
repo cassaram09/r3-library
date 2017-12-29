@@ -5,7 +5,7 @@ class Resource {
     const { name, url, headers, state } = options
 
     if ( !name ) {
-      throw("Name is required when creating a new Resource.")
+      throw( new Error("Name is required when creating a new Resource.") )
     }
 
     this.name = name.toUpperCase();
@@ -48,6 +48,9 @@ class Resource {
  * Enable our resource to use our Store's dispatch function.
 */
 Resource.configure = function({dispatch}){
+  if ( !dispatch ) {
+    throw( new Error("Dispatch function is required when configuring the Resource class.") )
+  }
   Resource.prototype.dispatch = dispatch;
 }
 
@@ -61,6 +64,9 @@ Resource.configure = function({dispatch}){
  * the response data.
 */
 Resource.prototype.dispatchAsync = function(actionName, data) {
+  if ( !actionName ) {
+    throw( new Error("Action name is required when dispatching an action.") )
+  }
 
   const name = this.prefix + actionName.toUpperCase();
 
@@ -78,6 +84,10 @@ Resource.prototype.dispatchAsync = function(actionName, data) {
  * Dispatch a synchronous action to our store.
 */
 Resource.prototype.dispatchSync = function(actionName, data) {
+  if ( !actionName ) {
+    throw( new Error("Action name is required when dispatching an action.") )
+  }
+
   const name = this.prefix + actionName.toUpperCase();
   this.dispatch({type: name, data: data});
 }
@@ -90,7 +100,7 @@ Resource.prototype.registerNewAction = function(options) {
   const { name, url, method, reducerFn, resourceFn } = options
 
   if ( !name || !reducerFn ) {
-    throw("Name and Reducer function are required when registering a new action.")
+    throw( new Error("Name and Reducer function are required when registering a new action.") )
   }
 
   this.addResourceAction({name, url, method, resourceFn});
@@ -107,7 +117,7 @@ Resource.prototype.addResourceAction = function(options) {
   const { name, url, method, resourceFn } = options
 
   if ( !name ) {
-    throw("Name is required when adding a resource action.")
+    throw( new Error("Name is required when adding a resource action.") )
   }
 
   const actionName = this.prefix + name.toUpperCase();
@@ -129,7 +139,7 @@ Resource.prototype.addResourceAction = function(options) {
 */ 
 Resource.prototype.addReducerAction = function(name, reducerFn) {
   if (!name || !reducerFn){
-    throw("Name and Reducer function are required.")
+    throw( new Error("Name and Reducer function are required when adding a reducer action.") )
   }
   const actionName = this.prefix +  name.toUpperCase();
   this.reducerActions[actionName] = this.reducerActions[actionName] || reducerFn;
@@ -141,7 +151,7 @@ Resource.prototype.addReducerAction = function(name, reducerFn) {
 */ 
 Resource.prototype.updateReducerAction = function(name, reducerFn) {
   if (!name || !reducerFn){
-    throw("Name and Reducer function are required.")
+    throw( new Error("Name and Reducer function are required when updating a reducer action.") )
   }
   const actionName = this.prefix +  name.toUpperCase();
   this.reducerActions[actionName] = reducerFn;
@@ -153,7 +163,7 @@ Resource.prototype.updateReducerAction = function(name, reducerFn) {
 */ 
 Resource.prototype.updateResourceAction = function(name, resourceFn) {
   if (!name || !resourceFn ){
-    throw("Name and Resource function are required.")
+    throw( new Error("Name and Resource function are required when updating a resource action.") )
   }
   const actionName = this.prefix + name.toUpperCase();
   this.reducerActions[actionName] = resourceFn;
@@ -179,6 +189,9 @@ Resource.prototype.registerRemoteActions = function() {
  * Dynamically creates requests to a remote endpoint.
 */
 Resource.prototype.fetchRequest = function(url, method, body, headers) {
+  if ( !url || !method ) {
+    throw( new Error("Url and Method are required for fetching a request.") )
+  }
   return new Promise( (resolve, reject) => {
     /* 
      * If we set URL params, let's automatically match the a key to them.
@@ -194,26 +207,24 @@ Resource.prototype.fetchRequest = function(url, method, body, headers) {
     }
 
     if ( method == 'GET' ) {
-      request(method, url)
+      return request(method, url)
       .query(body)
       .set(headers)
       .end( (error, response) => {
         resolve(response)
       })
-      return
     }
 
     if (method == 'POST' || method == 'PATCH' || method == 'PUT' || method == 'DELETE' ) {
-      request(method, url)
+      return request(method, url)
       .send(body)
       .set(headers)
       .end( (error, response) => {
         resolve(response)
       })
-      return
     }
 
-    reject('Invalid request.')
+    return reject('Invalid request.')
   })
 }
 
@@ -249,6 +260,10 @@ Resource.prototype.remoteActions = {
  * Use this to find the right value for param matching
 */
 function findValueByKey(obj, key){
+  if ( !obj || !key ) {
+    throw( 'Object and key are required for finding value by key.')
+  }
+
   for (let prop in obj) {
     return key === prop ? obj[prop] : findValueByKey(obj[prop], key)
   }
@@ -264,14 +279,20 @@ function removeData(state, action){
     return exercise.id == action.data.id
   })
   newState.splice(indexToDelete, 1);
-  return {data: newState, errors: state.errors}
+  return {
+    data: newState, 
+    errors: state.errors
+  }
 }
 
 /* 
  * Generic function for adding a piece of data to our store.
 */
 function addData(state, action){
-  return {data: [ ...state.data.filter(element => element.id !== action.data.id), Object.assign({}, action.data)], errors: state.errors}
+  return {
+    data: [ ...state.data.filter(element => element.id !== action.data.id), Object.assign({}, action.data)], 
+    errors: state.errors
+  }
 }
 
 export default Resource;
