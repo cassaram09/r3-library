@@ -1,5 +1,12 @@
 const request = require('superagent')
 
+const addResourceAction = Symbol('addResourceAction');
+const addReducerAction = Symbol('addReducerAction');
+const remoteActions = Symbol('remoteActions');
+const findValueByKey = Symbol('findValueByKey');
+const removeData = Symbol('removeData');
+const addData = Symbol('addData');
+
 class Resource {
   constructor(options){
     const { name, url, headers, state } = options
@@ -33,14 +40,134 @@ class Resource {
     /*
      * Add special error handlers to our resource.
     */
-    this.addReducerAction('$ERROR',(state, action) =>{
-      return {data: state.data, errors: [action.data]}
+    this.registerSync({
+      name: '$ERROR',
+      reducerFn: (state, action) => {
+        return {data: state.data, errors: [action.data]}
+      }
     })
 
-    this.addReducerAction('$CLEAR_ERRORS',(state, action) =>{
-      return {data: state.data, errors: []}
+    this.registerSync({
+      name: '$CLEAR_ERRORS',
+      reducerFn: (state, action) => {
+        return {data: state.data, errors: []}
+      }
     })
+  }
 
+
+  /* 
+   * PRIVATE
+   *
+   * Create a new resource action, which are used to perform an action, such as 
+   * requesting a resource from a server. However, we can also pass non remote 
+   * action, as long as it uses a Promise.
+  */ 
+  [addResourceAction] (options) {
+    const { name, url, method, resourceFn } = options
+
+    if ( !name ) {
+      throw( new Error("Name is required when adding a resource action.") )
+    }
+
+    const actionName = this.prefix + name.toUpperCase();
+
+    // Use a resourceFN if available, else use default resource action
+    if ( resourceFn ) {
+      this.resourceActions[actionName] = resourceFn
+    } else {
+      this.resourceActions[actionName] = (data) => {
+        return this.fetchRequest(url, method, data, this.headers);
+      };
+    }
+
+    return this;
+  }
+
+  /* 
+   * PRIVATE
+   *
+   * Adds a new reducer action to our Resource's reducer.  
+  */ 
+  [addReducerAction] (options) {
+    const { name, reducerFn } = options
+
+    if (!name || !reducerFn){
+      throw( new Error("Name and Reducer function are required when adding a reducer action.") )
+    }
+
+    const actionName = this.prefix +  name.toUpperCase();
+    this.reducerActions[actionName] = this.reducerActions[actionName] || reducerFn;
+    return this;
+  }
+
+  [remoteActions] () { 
+    return {
+      query: {
+      method: 'GET',
+        url: '',
+        reducerFn: (state, action) => { return {data: action.data, errors: [...state.errors]} },
+      },
+      get: {
+        method: 'GET',
+        url: '/:id',
+        reducerFn: (state, action) => { return this[addData](state, action) },
+      },
+      create: {
+        method: 'POST',
+        url: '',
+        reducerFn: (state, action) => { return this[addData](state, action) },
+      },
+      update: {
+        method: 'PATCH',
+        url: '/:id',
+        reducerFn: (state, action) => { return this[addData](state, action) },
+      },
+      delete: {
+        method: 'DELETE',
+        url: '/:id',
+        reducerFn: (state, action) => { return this[removeData](state, action) },
+      }
+    }
+  }
+
+  /* 
+   * Use this to find the right value for param matching
+  */
+  [findValueByKey] (obj, key){
+    if ( !obj || !key ) {
+      throw( 'Object and key are required for finding value by key.')
+    }
+
+    for (let prop in obj) {
+      return key === prop ? obj[prop] : this[findValueByKey](obj[prop], key)
+    }
+    return null;
+  }
+
+  /* 
+   * Generic function for removing a piece of data from our store.
+  */
+  [removeData] (state, action){
+    const newState = Object.assign([], state.data);
+    const indexToDelete = state.data.findIndex(exercise => {
+      return exercise.id == action.data.id
+    })
+    newState.splice(indexToDelete, 1);
+    return {
+      data: newState, 
+      errors: state.errors
+    }
+  }
+
+  /* 
+   * Generic function for adding a piece of data to our store.
+  */
+  [addData] (state, action){
+    return {
+      data: [ ...state.data.filter(element => element.id !== action.data.id), Object.assign({}, action.data)], 
+      errors: state.errors
+    }
   }
 }
 
@@ -89,60 +216,43 @@ Resource.prototype.dispatchSync = function(actionName, data) {
   }
 
   const name = this.prefix + actionName.toUpperCase();
-  this.dispatch({type: name, data: data});
+  Resource.prototype.dispatch({type: name, data: data});
 }
 
 /*
  * Register a custom resource action and reducer action. This accepts any
  * promise based function as a resource function.
 */
-Resource.prototype.registerNewAction = function(options) {
+Resource.prototype.registerAsync = function(options) {
   const { name, url, method, reducerFn, resourceFn } = options
 
   if ( !name || !reducerFn ) {
-    throw( new Error("Name and Reducer function are required when registering a new action.") )
+    throw( new Error("Name and Reducer function are required when registering a new Async action.") )
   }
 
-  this.addResourceAction({name, url, method, resourceFn});
-  this.addReducerAction(name, reducerFn);
-  return this;
-}
-
-/* 
- * Create a new resource action, which are used to perform an action, such as 
- * requesting a resource from a server. However, we can also pass non remote 
- * action, as long as it uses a Promise.
-*/ 
-Resource.prototype.addResourceAction = function(options) {
-  const { name, url, method, resourceFn } = options
-
-  if ( !name ) {
-    throw( new Error("Name is required when adding a resource action.") )
+  if ( (!url || !method) && !resourceFn ) {
+    throw( new Error("Resource function must be provided when URL and Method are omitted") )
   }
 
-  const actionName = this.prefix + name.toUpperCase();
-
-  // Use a resourceFN if available, else use default resource action
-  if ( resourceFn ) {
-    this.resourceActions[actionName] = resourceFn
-  } else {
-    this.resourceActions[actionName] = (data) => {
-      return this.fetchRequest(url, method, data, this.headers);
-    };
-  }
+  this[addResourceAction]({name, url, method, resourceFn});
+  this[addReducerAction]({name, reducerFn});
 
   return this;
 }
 
-/* 
- * Adds a new reducer action to our Resource's reducer.  
-*/ 
-Resource.prototype.addReducerAction = function(name, reducerFn) {
-  if (!name || !reducerFn){
-    throw( new Error("Name and Reducer function are required when adding a reducer action.") )
+/*
+ * Register a custom resource action and reducer action. This accepts any
+ * promise based function as a resource function.
+*/
+Resource.prototype.registerSync = function(options) {
+  const { name, reducerFn} = options
+
+  if ( !name || !reducerFn ) {
+    throw( new Error("Name and Reducer function are required when registering a new Sync action.") )
   }
-  const actionName = this.prefix +  name.toUpperCase();
-  this.reducerActions[actionName] = this.reducerActions[actionName] || reducerFn;
+
+  this[addReducerAction]({name, reducerFn});
+
   return this;
 }
 
@@ -175,12 +285,14 @@ Resource.prototype.updateResourceAction = function(name, resourceFn) {
  * query(index), get(individual resource), create, update, and delete.
 */
 Resource.prototype.registerRemoteActions = function() { 
-  for ( let action in this.remoteActions) {
+  const actions = this[remoteActions]()
+
+  for ( let action in actions) {
     const name = '$' + action.toUpperCase()
-    const url = this.url + this.remoteActions[action].url;
-    const method = this.remoteActions[action].method;
-    const reducerFn =  this.remoteActions[action].reducerFn
-    this.registerNewAction({name, url, method, reducerFn})
+    const url = this.url + actions[action].url;
+    const method = actions[action].method;
+    const reducerFn =  actions[action].reducerFn
+    this.registerAsync({name, url, method, reducerFn})
   }
   return this;
 }
@@ -202,7 +314,7 @@ Resource.prototype.fetchRequest = function(url, method, body, headers) {
 
     if (urlParams) {
       for ( let param of urlParams ){
-        url = url.replace(param, findValueByKey(body, param.substring(1)))
+        url = url.replace(param, this[findValueByKey](body, param.substring(1)))
       }
     }
 
@@ -226,73 +338,6 @@ Resource.prototype.fetchRequest = function(url, method, body, headers) {
 
     return reject('Invalid request.')
   })
-}
-
-Resource.prototype.remoteActions = {
-  query: {
-    method: 'GET',
-    url: '',
-    reducerFn: (state, action) => { return {data: action.data, errors: [...state.errors]} },
-  },
-  get: {
-    method: 'GET',
-    url: '/:id',
-    reducerFn: (state, action) => { return addData(state, action) },
-  },
-  create: {
-    method: 'POST',
-    url: '',
-    reducerFn: (state, action) => { return addData(state, action) },
-  },
-  update: {
-    method: 'PATCH',
-    url: '/:id',
-    reducerFn: (state, action) => { return addData(state, action) },
-  },
-  delete: {
-    method: 'DELETE',
-    url: '/:id',
-    reducerFn: (state, action) => { return removeData(state, action) },
-  }
-}
-
-/* 
- * Use this to find the right value for param matching
-*/
-function findValueByKey(obj, key){
-  if ( !obj || !key ) {
-    throw( 'Object and key are required for finding value by key.')
-  }
-
-  for (let prop in obj) {
-    return key === prop ? obj[prop] : findValueByKey(obj[prop], key)
-  }
-  return null;
-}
-
-/* 
- * Generic function for removing a piece of data from our store.
-*/
-function removeData(state, action){
-  const newState = Object.assign([], state.data);
-  const indexToDelete = state.data.findIndex(exercise => {
-    return exercise.id == action.data.id
-  })
-  newState.splice(indexToDelete, 1);
-  return {
-    data: newState, 
-    errors: state.errors
-  }
-}
-
-/* 
- * Generic function for adding a piece of data to our store.
-*/
-function addData(state, action){
-  return {
-    data: [ ...state.data.filter(element => element.id !== action.data.id), Object.assign({}, action.data)], 
-    errors: state.errors
-  }
 }
 
 export default Resource;

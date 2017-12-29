@@ -1,19 +1,17 @@
 # r3 Library
 
-**r3-library** (short for React-Redux-Resource) is a small library that allows users to easily create and dispatch actions in an object oriented fashion.
+**r3-library** (short for React-Redux-Resource) allows users to create and dispatch actions in an object oriented fashion.
 
-Easily create synchronous and asynchronous actions
-Registering new actions automatically updates your reducers.
-Consistent, scoped naming conventions allows for easier scaling and maintenance
+**Features**  
 
-This project was inspired by AngularJS $Resource functionality for making HTTP requests. The original goal was to make it easier to handle HTTP requests /async actions in Redux, I quickly expanded the scope to also handle other async Promise based actions as well as synchronous actions. 
-
-EDIT: 12/29/17  
+  - Easily create synchronous and asynchronous actions  
+  - Registering new actions automatically updates your reducers  
+  - Consistent, scoped naming conventions allows for easier scaling and maintenance  
   - Ability to dispatch error handling actions  
   - Ability to dispatch both Async and Sync actions  
   - Better test coverage  
-  - Refactored request handling using `superagent` module  
-  - General code cleanup  
+  - Refactored request handling using `superagent` module   
+  - General code cleanup    
 
 ## Installation
 
