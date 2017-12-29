@@ -4,14 +4,13 @@
 
 **Features**  
 
-  - Easily create synchronous and asynchronous actions  
+  - Easily create and dispatch both synchronous and asynchronous actions 
+  - Built in async CRUD actions 
   - Registering new actions automatically updates your reducers  
-  - Consistent, scoped naming conventions allows for easier scaling and maintenance  
-  - Ability to dispatch error handling actions  
-  - Ability to dispatch both Async and Sync actions  
-  - Better test coverage  
-  - Refactored request handling using `superagent` module   
-  - General code cleanup    
+  - Consistent, scoped naming conventions allows for easy scaling and maintenance  
+  - Gracefully handle errors - dispatch error actions to our store so we can render them to the user   
+  - Simple remote requests using `superagent`
+  - No Redux middleware required
 
 ## Installation
 
@@ -46,12 +45,23 @@ Make sure you have **redux** installed.
       state: []
     })
 
-    // Custom action
+    // Custom action - resource fn automatically generated
     Widget.registerNewAction({
       name: 'GET_CURRENT_WIDGET', 
-      url: 'http://localhost:3000/widgets', 
+      url: 'http://localhost:3000/widgets/current-widget', 
       method: 'GET', 
-      reducerFn:(state, action) => { return action.data }
+      reducerFn:(state, action) => { return action.data }, 
+      resourceFn: () => {
+        return new Promise((resolve, reject) => {
+          request
+          .post(`/image-upload`)
+          .set('AUTHORIZATION', `Bearer ${sessionStorage.jwt}`)
+          .attach('image', data.file)
+          .end(function(error, response){
+            resolve(response);
+          });
+        });
+      }
     })
 
     // Example of promise-based, non remote resource action below

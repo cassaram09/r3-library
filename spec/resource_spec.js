@@ -4,40 +4,9 @@ const redux = require('redux')
 const request = require('superagent')
 const mock = require('superagent-mocker')(request);
 
-var originalTimeout;
-  beforeEach(function() {
-    originalTimeout = jasmine.DEFAULT_TIMEOUT_INTERVAL;
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
-  });
-
-afterEach(function() {
-    jasmine.DEFAULT_TIMEOUT_INTERVAL = originalTimeout;
-  });
-
 function configureStore(reducer){
   return redux.createStore(reducer)
 };
-
-mock.post('/widgets', function(req) {
-  return {
-    body: req.body
-  };
-});
-
-mock.get('/widgets', function(req) {
-  return {
-    ok: true,
-    body: [{id: 1}, {id: 2}, {id: 3}]
-  };
-});
-
-mock.get('/widgets/1', function(req) {
-  return {
-    body: {id: 1}
-  };
-});
-
-
 
 /* 
  * Generic function for removing a piece of data from our store.
@@ -59,53 +28,133 @@ function addData(state, action){
 }
 
 describe('Resource', function () {
+  var Widget; 
+  var Store;
+  var stubbedAction = new Promise(function(resolve, reject){
+    resolve('done')
+  })
+  var stubbedExpectation = function () {};
 
-  it('creates a new resource', function () {
-
-      const headers = {'CONTENT': 'JSON'}
-      const res = new Resource({name: 'resource', url: '/resources', headers: headers, state: []});
-
-      expect(res.name).toEqual('RESOURCE');
-      expect(res.url).toEqual('/resources');
-      expect(res.headers).toEqual(headers);
-      expect(res.state).toEqual({data: [], errors: []});
-  });
-
-  it('registers remote actions when called', function () {
-      const remotes = new Resource({name: 'defaults', url: '/defaults', headers: {}, state: []}).registerRemoteActions();
-      const noRemotes = new Resource({name: 'defaults', url: '/defaults', headers: {}, state: []})
-
-      const remotesKeys = Object.keys(remotes.resourceActions)
-      expect(remotesKeys.length).toEqual(5);
-
-      const noRemotesKeys = Object.keys(noRemotes.resourceActions)
-      expect(noRemotesKeys.length).toEqual(0);
-  });
-
-  it('successfully registers new actions', function () {
-      const res = new Resource({name: 'resource', url: '/resources', headers: null, state: []});
-
-      res.registerNewAction({name: 'GET_CURRENT_USER', url: '/current-user', method: 'GET', reducerFn: (state, action) => {return action.data} })
-
-      var key = Object.keys(res.resourceActions)[0]
-      expect(res.resourceActions[key]).toBeTruthy()
-      expect(key).toEqual('RESOURCE_GET_CURRENT_USER')
-  });
-
-  it('successfully dispatches a Sync action that adds to store', function () {
-
-    const Widget = new Resource({name: 'widget', url: '/widgets', state: []})
+  beforeEach(function() {
+    Widget = new Resource({
+      name: 'widget', 
+      url: '/widgets', 
+      headers: {'Content-Type': 'application/json'}, 
+      state: []
+    });
 
     let rootReducer = redux.combineReducers({
       widget: Widget.reducer
     })
 
-    let Store = configureStore(rootReducer)
+    Store = configureStore(rootReducer)
 
     Resource.configure({dispatch: Store.dispatch})
 
-    Widget.addReducerAction('ADD_WIDGET', (state, action) => { 
-      return addData(state,action) 
+    // stub our async action
+    Widget.dispatchAsync = function (actionName, data) {
+      let _this = this;
+
+      if (!actionName) {
+        throw new Error("Action name is required when dispatching an action.");
+      }
+
+      var name = this.prefix + actionName.toUpperCase();
+
+      return stubbedAction.then(function (response) {
+        if (!response.ok) {
+          throw response;
+        }
+        _this.dispatch({type: name, data: response.body});
+        stubbedExpectation();
+      }).catch(function (error) {
+        _this.dispatch({ type: _this.prefix + '$ERROR', data: error.body });
+      });
+    };
+  });
+
+
+  it('creates a new resource', function () {
+    expect(Widget.name).toEqual('WIDGET');
+    expect(Widget.url).toEqual('/widgets');
+    expect(Widget.headers).toEqual({'Content-Type': 'application/json'});
+    expect(Widget.state).toEqual({data: [], errors: []});
+
+    expect(Object.keys(Widget.resourceActions).length).toEqual(0);
+  });
+
+  it('creates assigns special error handling functions on initialization', function () {
+    expect(Object.keys(Widget.reducerActions).length).toEqual(2);
+    expect(Widget.reducerActions['WIDGET_$ERROR']).not.toBe(undefined)
+    expect(Widget.reducerActions['WIDGET_$CLEAR_ERRORS']).not.toBe(undefined)
+  });
+
+  it('registers remote actions when called', function () {
+    Widget.registerRemoteActions();
+    expect(Object.keys(Widget.resourceActions).length).toEqual(5);
+    expect(Object.keys(Widget.reducerActions).length).toEqual(7);
+  });
+
+
+  describe('can register a new action: ', function () {
+    it('Async action without resourceFn', function () {
+
+      Widget.registerAsync({
+        name: 'GET_CURRENT_WIDGET', 
+        url: '/current-user', 
+        method: 'GET', 
+        reducerFn: (state, action) => {return action.data} 
+      })
+
+      var key = Object.keys(Widget.resourceActions)[0]
+      expect(Widget.resourceActions[key]).toBeTruthy()
+      expect(key).toEqual('WIDGET_GET_CURRENT_WIDGET')
+    });
+
+    it('Async action with resourceFn', function () {
+
+      Widget.registerAsync({
+        name: 'GET_CURRENT_WIDGET', 
+        reducerFn: (state, action) => {return action.data},
+        resourceFn:(data) => {
+          return new Promise((resolve, reject) => {
+            request
+            .get('/widgets/current')
+            .end(function(error, response){
+              resolve(response);
+            });
+          });
+        }
+      })
+
+      var key = Object.keys(Widget.resourceActions)[0]
+      expect(Widget.resourceActions[key]).toBeTruthy()
+      expect(key).toEqual('WIDGET_GET_CURRENT_WIDGET')
+    });
+
+    it('Sync action', function () {
+      Widget.registerSync({
+        name: 'GET_CURRENT_WIDGET', 
+        reducerFn: (state, action) => {return action.data} 
+      })
+
+      var key = Object.keys(Widget.reducerActions)[2]
+      expect(Widget.resourceActions[key]).toBeFalsy()
+      expect(Widget.reducerActions[key]).toBeTruthy()
+      expect(key).toEqual('WIDGET_GET_CURRENT_WIDGET')
+    });
+
+    
+
+  })
+
+  it('successfully dispatches a Sync action that adds data to store', function () {
+
+    Widget.registerSync({
+      name:'ADD_WIDGET', 
+      reducerFn: (state, action) => { 
+        return addData(state,action) 
+      }
     })
 
     Widget.dispatchSync('ADD_WIDGET', {id: 1})
@@ -116,18 +165,11 @@ describe('Resource', function () {
 
   it('successfully dispatches a Sync action that removes from store', function () {
 
-    const Widget = new Resource({name: 'widget', url: '/widgets', state: []})
-
-    let rootReducer = redux.combineReducers({
-      widget: Widget.reducer
-    })
-
-    let Store = configureStore(rootReducer)
-
-    Resource.configure({dispatch: Store.dispatch})
-
-    Widget.addReducerAction('DELETE_WIDGET', (state, action) => { 
-      return removeData(state,action) 
+    Widget.registerSync({
+      name:'DELETE_WIDGET', 
+      reducerFn: (state, action) => { 
+        return removeData(state,action) 
+      }
     })
 
     Widget.dispatchSync('DELETE_WIDGET', {id: 1})
@@ -138,16 +180,6 @@ describe('Resource', function () {
 
   it('successfully dispatches an $ERROR action', function () {
 
-    const Widget = new Resource({name: 'widget', url: '/widgets', state: []})
-
-    let rootReducer = redux.combineReducers({
-      widget: Widget.reducer
-    })
-
-    let Store = configureStore(rootReducer)
-
-    Resource.configure({dispatch: Store.dispatch})
-
     Widget.dispatchSync('$ERROR', {title: 'Error title', detail: 'Error detail'})
 
     expect(Store.getState().widget.errors[0]).toEqual({title: 'Error title', detail: 'Error detail'})
@@ -156,16 +188,6 @@ describe('Resource', function () {
 
   it('successfully dispatchs a $CLEAR_ERRORS action', function () {
 
-    const Widget = new Resource({name: 'widget', url: '/widgets', state: []})
-
-    let rootReducer = redux.combineReducers({
-      widget: Widget.reducer
-    })
-
-    let Store = configureStore(rootReducer)
-
-    Resource.configure({dispatch: Store.dispatch})
-
     Widget.dispatchSync('$ERROR', {title: 'Error title', detail: 'Error detail'})
     Widget.dispatchSync('$CLEAR_ERRORS')
 
@@ -173,30 +195,60 @@ describe('Resource', function () {
 
   });
 
-  // need to work on this test - dispatchAsync not working
-  it('successfully dispatchs a GET Async action', function (done) {
+  it('successfully dispatchs a $QUERY Async action', function (done) {
+    mock.get('/widgets', function(req) {
+      return {
+        ok: true,
+        body: [{id: 1}, {id: 2}, {id: 3}]
+      };
+    });
 
-    const Widget = new Resource({name: 'widget', url: '/widgets', state: []}).registerRemoteActions()
+    Widget.registerRemoteActions();
 
-    let rootReducer = redux.combineReducers({
-      widget: Widget.reducer
+    stubbedAction = new Promise(function(resolve, reject){
+      request
+      .get(Widget.url)
+      .end( (error, response) => {
+        resolve(response)
+      })
     })
 
-    let Store = configureStore(rootReducer)
-
-    Resource.configure({dispatch: Store.dispatch})
-
-    request
-    .get(Widget.url)
-    .end( (error, response) => {
-      Widget.dispatch({type: Widget.prefix + '$QUERY', data: response.body});
+    stubbedExpectation = function(){
       expect(Store.getState().widget.data).toEqual([{id: 1}, {id: 2}, {id: 3}])
       done()
-    })
+    }
 
+    Widget.dispatchAsync('$QUERY')
 
   });
 
+  it('successfully dispatchs a $CREATE Async action', function (done) {
+    mock.post('/widgets', function(req) {
+      return {
+        ok: true,
+        body: {id: 1, name: 'myWidget'}
+      };
+    });
+
+    Widget.registerRemoteActions();
+
+    stubbedAction = new Promise(function(resolve, reject){
+      request
+      .post(Widget.url)
+      .send({name: 'myWidget'})
+      .end( (error, response) => {
+        resolve(response)
+      })
+    })
+
+    stubbedExpectation = function(){
+      expect(Store.getState().widget.data).toEqual([{id: 1, name: 'myWidget'}])
+      done()
+    }
+
+    Widget.dispatchAsync('$CREATE')
+
+  });
 
 });
 
