@@ -2,6 +2,10 @@
   "name": "r3-library",
   "version": "1.2.0",
   "description": "A library for simplifying resource actions in React / Redux application.",
+  "repository" : { 
+    "type": "git",
+    "url": "https://github.com/cassaram09/r3-library"
+  },
   "main": "lib/index.js",
   "scripts": {
     "test": "jasmine",
