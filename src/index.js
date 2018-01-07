@@ -174,11 +174,14 @@ class Resource {
 /*  
  * Enable our resource to use our Store's dispatch function.
 */
-Resource.configure = function({dispatch}){
-  if ( !dispatch ) {
+Resource.configure = function(options){
+  if ( !options.dispatch ) {
     throw( new Error("Dispatch function is required when configuring the Resource class.") )
   }
-  Resource.prototype.dispatch = dispatch;
+
+  for ( let option in options ) {
+    Resource.prototype[option] = options[option]
+  }
 }
 
 /*  
